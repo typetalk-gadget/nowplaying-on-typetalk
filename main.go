@@ -38,6 +38,7 @@ const (
 	flagNameSpotifyClientID      = "spotify_client_id"
 	flagNameSpotifyClientSecret  = "spotify_client_secret"
 	flagNameStatusEmoji          = "status_emoji"
+	flagNamePort                 = "port"
 )
 
 type Config struct {
@@ -48,6 +49,7 @@ type Config struct {
 	SpotifyClientID      string `mapstructure:"spotify_client_id"`
 	SpotifyClientSecret  string `mapstructure:"spotify_client_secret"`
 	StatusEmoji          string `mapstructure:"status_emoji"`
+	Port                 int    `mapstructure:"port"`
 }
 
 var (
@@ -90,6 +92,7 @@ func main() {
 	flags.String(flagNameSpotifyClientID, "", "spotify client id [SPOTIFY_CLIENT_ID]")
 	flags.String(flagNameSpotifyClientSecret, "", "spotify client secret [SPOTIFY_CLIENT_SECRET]")
 	flags.String(flagNameStatusEmoji, ":musical_note:", "typetalk status emoji [STATUS_EMOJI]")
+	flags.Int(flagNamePort, defaultPort, "port number for OAuth")
 
 	_ = viper.BindPFlag(flagNameDebug, flags.Lookup(flagNameDebug))
 	_ = viper.BindPFlag(flagNameTypetalkClientID, flags.Lookup(flagNameTypetalkClientID))
@@ -98,6 +101,7 @@ func main() {
 	_ = viper.BindPFlag(flagNameSpotifyClientID, flags.Lookup(flagNameSpotifyClientID))
 	_ = viper.BindPFlag(flagNameSpotifyClientSecret, flags.Lookup(flagNameSpotifyClientSecret))
 	_ = viper.BindPFlag(flagNameStatusEmoji, flags.Lookup(flagNameStatusEmoji))
+	_ = viper.BindPFlag(flagNamePort, flags.Lookup(flagNamePort))
 
 	cobra.OnInitialize(func() {
 		configFile, err := flags.GetString(flagNameConfig)
@@ -129,8 +133,8 @@ var (
 	// You must register an application at Spotify's developer portal
 	// and enter this value.
 	// http://localhost:18080/nowplaying-on-typetalk
-	redirectURI = fmt.Sprintf("http://localhost:%d/%s", defaultPort, cmdName)
-	auth        = spotify.NewAuthenticator(redirectURI, spotify.ScopeUserReadCurrentlyPlaying)
+	redirectURI string
+	auth        spotify.Authenticator
 	state       = uuid.NewV4().String()
 	ch          = make(chan *spotify.Client)
 )
@@ -139,9 +143,12 @@ func run(c *cobra.Command, args []string) {
 
 	// printDebug(fmt.Sprintf("config: %#v\n", config))
 
+	redirectURI = fmt.Sprintf("http://localhost:%d/%s", config.Port, cmdName)
+	auth = spotify.NewAuthenticator(redirectURI, spotify.ScopeUserReadCurrentlyPlaying)
+
 	auth.SetAuthInfo(config.SpotifyClientID, config.SpotifyClientSecret)
 
-	ln, err := net.Listen("tcp", fmt.Sprintf(":%d", defaultPort))
+	ln, err := net.Listen("tcp", fmt.Sprintf(":%d", config.Port))
 	if err != nil {
 		printFatal(err)
 	}

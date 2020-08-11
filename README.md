@@ -42,6 +42,7 @@ $ nowplaying-on-typetalk [flags]
   -c, --config string                   config file path (default "~/.nowplaying-on-typetalk/config.yml")
       --debug                           debug mode
   -h, --help                            help for nowplaying-on-typetalk
+      --port int                        port number for OAuth (default 18080)
       --spotify_client_id string        spotify client id [SPOTIFY_CLIENT_ID]
       --spotify_client_secret string    spotify client secret [SPOTIFY_CLIENT_SECRET]
       --status_emoji string             typetalk status emoji [STATUS_EMOJI] (default ":musical_note:")
@@ -57,6 +58,8 @@ $ nowplaying-on-typetalk [flags]
 
 ```yaml
 debug: true
+port: 18080
+typetalk_client_id: deadbeef
 typetalk_client_id: deadbeef
 typetalk_client_secret: deadcode
 typetalk_space_key: foo
@@ -102,7 +105,7 @@ This page explains how to do this.
 ![5](./capture/5.png)
 
 - Set the following URL in "Redirect URI's" as the URL to be redirected to after authentication.
-  - http://localhost:18080/nowplaying-on-typetalk
+  - http://localhost:18080/nowplaying-on-typetalk (* The port number should be as same as your config. )
 - Click the "ADD" and Click the "SAVE" and save the setting.
 
 ![7](./capture/7.png)
