@@ -14,6 +14,7 @@ import (
 	"strings"
 	"syscall"
 	"time"
+	"unicode/utf8"
 
 	typetalk "github.com/nulab/go-typetalk/v3/typetalk/v1"
 	uuid "github.com/satori/go.uuid"
@@ -247,8 +248,8 @@ func (h *handler) Serve(playing *spotify.CurrentlyPlaying) {
 	artistName := playing.Item.Artists[0].Name
 	// eg. Retarded/KID FRESINO
 	metadata := fmt.Sprintf("%s/%s", trackName, artistName)
-	if 25 < len(metadata) {
-		metadata = metadata[:25] + "…"
+	if 25 < utf8.RuneCountInString(metadata) {
+		metadata = string([]rune(metadata)[:25]) + "…"
 	}
 	// eg. Retarded/KID FRESINO https://open.spotify.com/track/6aOaB0vl2ilHxRb23Wiazv
 	msg := fmt.Sprintf("%s %s", metadata, externalURL)
