@@ -1,4 +1,4 @@
-# nowplaying-on-typetalk
+# nowplaying-on-typetalk ![Go](https://github.com/typetalk-gadget/nowplaying-on-typetalk/workflows/Go/badge.svg)
 
 A command line tool to display the song currently playing on Spotify in Typetalk status.
 
