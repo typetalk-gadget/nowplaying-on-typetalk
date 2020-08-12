@@ -39,7 +39,7 @@ $ nowplaying-on-typetalk [flags]
 ## Flags
 
 ```sh
-  -c, --config string                   config file path (default "~/.nowplaying-on-typetalk/config.yml")
+  -c, --config string                   config file path (default "~/.nowplaying-on-typetalk/config.yml". if you set $XDG_CONFIG_HOME, switch default to "$XDG_CONFIG_HOME/nowplaying-on-typetalk/config.yml")
       --debug                           debug mode
   -h, --help                            help for nowplaying-on-typetalk
       --port int                        port number for OAuth (default 18080)
