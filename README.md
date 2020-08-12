@@ -12,6 +12,17 @@ We want to share the track we are listening to at work in a discreet and easy wa
 If we post to a topic in Typetalk, we have to open that topic and that post is noise.
 If it's a status, we can just hover over any topic, and it's not noise.
 
+## Getting Started
+
+1. [Install the nowplaying-on-typetalk.](#installation)
+2. [Register Typetalk App and get Client ID and Client Secret.](#setting-typetalk-app)
+3. [Create Spotify App and set the URL to redirect to after authentication, get Client ID and Client Secret.](#setting-spotify-app)
+4. [Write a config file.](#config-file)
+5. [Execute the nowplaying-on-typetalk command.](#Synopsis)
+    - When you execute this command, your browser will launch.
+    - You can see Spotify's authentication screen in your browser.
+    - Authenticate with your Spotify account.
+
 ## Installation
 
 ### GoBinaries
@@ -30,15 +41,20 @@ If you have the Go(go1.14+) installed, you can also install it with go get comma
 $ go get github.com/typetalk-gadget/nowplaying-on-typetalk
 ```
 
+### GitHub Release Page
+
+Built binaries are available on Github releases:  
+https://github.com/typetalk-gadget/nowplaying-on-typetalk/releases
+
 ## Synopsis
 
-```sh
+```
 $ nowplaying-on-typetalk [flags]
 ```
 
 ## Flags
 
-```sh
+```
   -c, --config string                   config file path (default "~/.nowplaying-on-typetalk/config.yml". if you set $XDG_CONFIG_HOME, switch default to "$XDG_CONFIG_HOME/nowplaying-on-typetalk/config.yml")
       --debug                           debug mode
   -h, --help                            help for nowplaying-on-typetalk
@@ -54,7 +70,17 @@ $ nowplaying-on-typetalk [flags]
 
 ## Config File
 
-### YAML
+### Default Config File
+
+Default par is `~/.nowplaying-on-typetalk/config.yml`.
+
+Default config file extension can be either `.yml` or `.yaml`.
+
+### XDG Base Directory
+
+If you set `$XDG_CONFIG_HOME`, switch default to `$XDG_CONFIG_HOME/nowplaying-on-typetalk/config.yml`.
+
+### YAML Structure
 
 ```yaml
 debug: true
@@ -68,11 +94,43 @@ spotify_client_secret: deadcode
 status_emoji: ":musical_note:"
 ```
 
+## Setting Typetalk App
+
+This tool uses Typetalk's API to save the currently status. So you need to create a Typetalk App and get Client ID and Client Secret.
+
+This section explains how to setting Typetalk App.
+
+### 1. Login to your develop setting in Typetalk
+
+- Login to Typetalk and open develop setting from following URL.
+  - https://typetalk.com/my/develop/applications
+
+### 2. Register new app
+
+- Once you have successfully logged in, your develop setting will open.
+- Click "Register new application" and register a new Typetalk App.
+
+![typetalk-app-1](./capture/typetalk-app-1.png)
+
+- Fill in the "Application Name" and "Grant Type" and "Description" fields on the APP register form.
+  - Application Name: nowplaying-on-typetalk
+  - Grant Type: Client Credentials
+  - Description:  Synchronizing the currently playing to Typetalk status
+- Click the "Register" and open the App management screen.
+
+![typetalk-app-2](./capture/typetalk-app-2.png)
+
+### 3. Get Client ID and Client Secret
+
+- You can see the "Client ID" and "Client Secret" of this app.
+
+![typetalk-app-3](./capture/typetalk-app-3.png)
+
 ## Setting Spotify App
 
 This tool uses Spotify's API to get the currently playing song. So you need to create a Spotify App and get Client ID and Client Secret. You also need to set up a URL to be redirected to after authentication.
 
-This page explains how to do this.
+This section explains how to setting Spotify App.
 
 ### 1. Login to your dashboard in Spotify
 
@@ -121,10 +179,3 @@ This page explains how to do this.
 
 For bugs, questions and discussions please use the GitHub Issues.
 
-## License
-
-[MIT License](http://www.opensource.org/licenses/mit-license.php)
-
-## Author
-
-[vvatanabe](https://github.com/vvatanabe)
