@@ -33,6 +33,15 @@ You can easily install it by making a curl request to [gobinaries.com](http://go
 $ curl -sf https://gobinaries.com/typetalk-gadget/nowplaying-on-typetalk | sh
 ```
 
+### Homebrew
+
+It can be installed with Homebrew, the package manager for MacOS.
+
+```sh
+$ brew tap typetalk-gadget/nowplaying-on-typetalk
+$ brew install nowplaying-on-typetalk
+```
+
 ### Go
 
 If you have the Go(go1.14+) installed, you can also install it with go get command.
