@@ -63,16 +63,20 @@ func main() {
 		printFatal("UserHomeDir:", err)
 	}
 
-	dotDir := filepath.Join(home, "."+cmdName)
+	dotDir := getDotDir(home)
 	err = os.MkdirAll(dotDir, 0700)
 	if err != nil {
 		printFatal("MkdirAll:", err)
 	}
-	defaultConfigFile := filepath.Join(dotDir, "config.yml")
+	defaultConfigFile := filepath.Join(dotDir, "config.yaml")
 	if !exists(defaultConfigFile) {
-		_, err = os.Create(defaultConfigFile)
-		if err != nil {
-			printFatal("Create:", err)
+		defaultConfigFile = filepath.Join(dotDir, "config.yml")
+		if !exists(defaultConfigFile) {
+			_, err = os.Create(defaultConfigFile)
+			if err != nil {
+				printFatal("Create:", err)
+			}
+
 		}
 	}
 
@@ -308,6 +312,13 @@ func openBrowser(url string) error {
 func exists(filename string) bool {
 	_, err := os.Stat(filename)
 	return err == nil
+}
+
+func getDotDir(home string) string {
+	if dir, exist := os.LookupEnv("XDG_CONFIG_HOME"); dir != "" && exist {
+		return filepath.Join(dir, cmdName)
+	}
+	return filepath.Join(home, "."+cmdName)
 }
 
 func printDebug(args ...interface{}) {
