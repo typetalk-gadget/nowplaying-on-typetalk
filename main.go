@@ -2,7 +2,10 @@ package main
 
 import (
 	"context"
+	"encoding/json"
+	"errors"
 	"fmt"
+	"io/ioutil"
 	"log"
 	"net"
 	"net/http"
@@ -54,6 +57,7 @@ type Config struct {
 
 var (
 	config Config
+	dotDir string
 )
 
 func main() {
@@ -63,7 +67,7 @@ func main() {
 		printFatal("UserHomeDir:", err)
 	}
 
-	dotDir := getDotDir(home)
+	dotDir = getDotDir(home)
 	err = os.MkdirAll(dotDir, 0700)
 	if err != nil {
 		printFatal("MkdirAll:", err)
@@ -149,53 +153,73 @@ func run(c *cobra.Command, args []string) {
 
 	redirectURI = fmt.Sprintf("http://localhost:%d/%s", config.Port, cmdName)
 	auth = spotify.NewAuthenticator(redirectURI, spotify.ScopeUserReadCurrentlyPlaying)
-
 	auth.SetAuthInfo(config.SpotifyClientID, config.SpotifyClientSecret)
 
-	ln, err := net.Listen("tcp", fmt.Sprintf(":%d", config.Port))
-	if err != nil {
-		printFatal(err)
-	}
-	defer ln.Close()
-
-	// first start an HTTP server
-	mux := http.NewServeMux()
-	// pattern /nowplaying-on-typetalk
-	mux.HandleFunc("/"+cmdName, completeAuth)
-	srv := http.Server{
-		Handler: mux,
-	}
-	go func() {
-		err := srv.Serve(ln)
-		if err != nil && err != http.ErrServerClosed {
+	var sc *spotify.Client
+	defer func() {
+		if sc == nil {
+			return
+		}
+		tok, err := sc.Token()
+		if err != nil {
 			printError(err)
+			return
+		}
+		err = saveSpotifyTokenToFile(dotDir, tok)
+		if err != nil {
+			printError(err)
+			return
 		}
 	}()
 
-	authURL := auth.AuthURL(state)
-	err = openBrowser(authURL)
-	if err != nil {
-		printFatal(err)
-	}
-
-	printDebug("Logged in to Spotify by visiting the following page in your browser:", authURL)
-
-	// wait for auth to complete
-	sc := <-ch
-
-	go func() {
-		err := srv.Shutdown(context.Background())
+	if tok, err := getSpotifyTokenFromFile(dotDir); err != nil {
+		printInfo(err)
+	} else {
+		sc, err = newSpotify(&auth, tok)
 		if err != nil {
 			printError(err)
 		}
-	}()
-
-	// use the sc to make calls that require authorization
-	user, err := sc.CurrentUser()
-	if err != nil {
-		printFatal(err)
 	}
-	printInfo("You are logged in as:", user.ID)
+
+	if sc == nil {
+		ln, err := net.Listen("tcp", fmt.Sprintf(":%d", config.Port))
+		if err != nil {
+			printFatal(err)
+		}
+
+		// first start an HTTP server
+		mux := http.NewServeMux()
+		// pattern /nowplaying-on-typetalk
+		mux.HandleFunc("/"+cmdName, completeAuth)
+		srv := http.Server{
+			Handler: mux,
+		}
+		go func() {
+			err := srv.Serve(ln)
+			if err != nil && err != http.ErrServerClosed {
+				printError(err)
+			}
+		}()
+
+		authURL := auth.AuthURL(state)
+		err = openBrowser(authURL)
+		if err != nil {
+			printFatal(err)
+		}
+
+		printDebug("Logged in to Spotify by visiting the following page in your browser:", authURL)
+
+		// wait for auth to complete
+		sc = <-ch
+
+		go func() {
+			err := srv.Shutdown(context.Background())
+			if err != nil {
+				printError(err)
+			}
+			ln.Close()
+		}()
+	}
 
 	tc := newTypetalk(config.TypetalkClientID, config.TypetalkClientSecret, "my")
 
@@ -226,13 +250,37 @@ func run(c *cobra.Command, args []string) {
 
 	ctx, cancel := context.WithTimeout(context.Background(), time.Minute)
 	defer cancel()
-	err = sps.Shutdown(ctx)
+	err := sps.Shutdown(ctx)
 	if err != nil {
 		printError("failed to graceful shutdown", err)
 		return
 	}
 	printInfo("completed graceful shutdown")
 
+}
+
+func getSpotifyTokenFromFile(dir string) (*oauth2.Token, error) {
+	blob, err := ioutil.ReadFile(filepath.Join(dir, "spotify"))
+	if err != nil {
+		return nil, err
+	}
+	var token oauth2.Token
+	err = json.Unmarshal(blob, &token)
+	if err != nil {
+		return nil, err
+	}
+	if token.Expiry.Before(time.Now()) {
+		return nil, errors.New("expired token")
+	}
+	return &token, nil
+}
+
+func saveSpotifyTokenToFile(dir string, token *oauth2.Token) error {
+	blob, err := json.Marshal(token)
+	if err != nil {
+		return err
+	}
+	return ioutil.WriteFile(filepath.Join(dir, "spotify"), blob, 0644)
 }
 
 func newTypetalk(clientID, clientSecret, scope string) *typetalk.Client {
@@ -243,6 +291,18 @@ func newTypetalk(clientID, clientSecret, scope string) *typetalk.Client {
 	}
 	oc := oauth2.NewClient(context.Background(), tokenSource)
 	return typetalk.NewClient(oc)
+}
+
+func newSpotify(auth *spotify.Authenticator, token *oauth2.Token) (*spotify.Client, error) {
+	c := auth.NewClient(token)
+	c.AutoRetry = true
+	user, err := c.CurrentUser()
+	if err != nil {
+		return nil, err
+	}
+	// use the sc to make calls that require authorization
+	printDebug("You are logged in as:", user.ID)
+	return &c, nil
 }
 
 type handler struct {
@@ -287,11 +347,13 @@ func completeAuth(w http.ResponseWriter, r *http.Request) {
 		printFatal("State mismatch: %s != %s\n", st, state)
 	}
 	// use the token to get an authenticated client
-	client := auth.NewClient(tok)
-	client.AutoRetry = true
-
+	c, err := newSpotify(&auth, tok)
+	if err != nil {
+		http.Error(w, "Couldn't connect spotify api", http.StatusForbidden)
+		printFatal(err)
+	}
 	fmt.Fprintf(w, "Login completed. You can close this tab.")
-	ch <- &client
+	ch <- c
 }
 
 func openBrowser(url string) error {
