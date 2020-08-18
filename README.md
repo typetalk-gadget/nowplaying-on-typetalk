@@ -50,6 +50,17 @@ If you have the Go(go1.14+) installed, you can also install it with go get comma
 $ go get github.com/typetalk-gadget/nowplaying-on-typetalk
 ```
 
+If the installation fails, set the environment variable `GO111MODULE` to `on` by the following command.
+
+```
+# Bash
+$ export GO111MODULE=on
+```
+```
+# Windows Command Prompt
+> set GO111MODULE=on
+```
+
 ### GitHub Release Page
 
 Built binaries are available on Github releases:  
