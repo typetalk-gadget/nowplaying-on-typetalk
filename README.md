@@ -106,7 +106,6 @@ If you set `$XDG_CONFIG_HOME`, switch default to `$XDG_CONFIG_HOME/nowplaying-on
 debug: true
 port: 18080
 typetalk_client_id: deadbeef
-typetalk_client_id: deadbeef
 typetalk_client_secret: deadcode
 typetalk_space_key: foo
 spotify_client_id: deadbeef
