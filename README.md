@@ -82,6 +82,7 @@ $ nowplaying-on-typetalk [flags]
       --spotify_client_id string        spotify client id [SPOTIFY_CLIENT_ID]
       --spotify_client_secret string    spotify client secret [SPOTIFY_CLIENT_SECRET]
       --status_emoji string             typetalk status emoji [STATUS_EMOJI] (default ":musical_note:")
+      --topic strings                   topic ID to post
       --typetalk_client_id string       typetalk client id [TYPETALK_CLIENT_ID]
       --typetalk_client_secret string   typetalk client secret [TYPETALK_CLIENT_SECRET]
       --typetalk_space_key string       typetalk space key [TYPETALK_SPACE_KEY]
@@ -111,6 +112,8 @@ typetalk_space_key: foo
 spotify_client_id: deadbeef
 spotify_client_secret: deadcode
 status_emoji: ":musical_note:"
+topics:
+  - 12345
 ```
 
 ## Setting Typetalk App

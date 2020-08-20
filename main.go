@@ -42,6 +42,9 @@ const (
 	flagNameSpotifyClientSecret  = "spotify_client_secret"
 	flagNameStatusEmoji          = "status_emoji"
 	flagNamePort                 = "port"
+	flagNameTopic                = "topic"
+
+	configNameTopics = "topics"
 )
 
 type Config struct {
@@ -53,6 +56,7 @@ type Config struct {
 	SpotifyClientSecret  string `mapstructure:"spotify_client_secret"`
 	StatusEmoji          string `mapstructure:"status_emoji"`
 	Port                 int    `mapstructure:"port"`
+	Topics               []int  `mapstructure:"topics"`
 }
 
 var (
@@ -101,6 +105,7 @@ func main() {
 	flags.String(flagNameSpotifyClientSecret, "", "spotify client secret [SPOTIFY_CLIENT_SECRET]")
 	flags.String(flagNameStatusEmoji, ":musical_note:", "typetalk status emoji [STATUS_EMOJI]")
 	flags.Int(flagNamePort, defaultPort, "port number for OAuth")
+	flags.StringSlice(flagNameTopic, nil, "topic ID to post")
 
 	_ = viper.BindPFlag(flagNameDebug, flags.Lookup(flagNameDebug))
 	_ = viper.BindPFlag(flagNameTypetalkClientID, flags.Lookup(flagNameTypetalkClientID))
@@ -110,6 +115,7 @@ func main() {
 	_ = viper.BindPFlag(flagNameSpotifyClientSecret, flags.Lookup(flagNameSpotifyClientSecret))
 	_ = viper.BindPFlag(flagNameStatusEmoji, flags.Lookup(flagNameStatusEmoji))
 	_ = viper.BindPFlag(flagNamePort, flags.Lookup(flagNamePort))
+	_ = viper.BindPFlag(configNameTopics, flags.Lookup(flagNameTopic))
 
 	cobra.OnInitialize(func() {
 		configFile, err := flags.GetString(flagNameConfig)
@@ -128,7 +134,6 @@ func main() {
 		if err := viper.Unmarshal(&config); err != nil {
 			printFatal("failed to unmarshal config", err)
 		}
-
 	})
 
 	if err := rootCmd.Execute(); err != nil {
@@ -221,7 +226,7 @@ func run(c *cobra.Command, args []string) {
 		}()
 	}
 
-	tc := newTypetalk(config.TypetalkClientID, config.TypetalkClientSecret, "my")
+	tc := newTypetalk(config.TypetalkClientID, config.TypetalkClientSecret, "my topic.post")
 
 	sps := stream.Stream{
 		Conn: sc,
@@ -229,6 +234,7 @@ func run(c *cobra.Command, args []string) {
 			tc:       tc,
 			spaceKey: config.TypetalkSpaceKey,
 			emoji:    config.StatusEmoji,
+			topics:   config.Topics,
 		},
 		LoggerFunc: printError,
 	}
@@ -308,17 +314,19 @@ func newSpotify(auth *spotify.Authenticator, token *oauth2.Token) (*spotify.Clie
 type handler struct {
 	tc              *typetalk.Client
 	spaceKey, emoji string
+	topics          []int
 }
 
 func (h *handler) Serve(playing *spotify.CurrentlyPlaying) {
+	if len(h.topics) > 0 {
+		for _, topicID := range h.topics {
+			h.postTopic(topicID, playing)
+		}
+	}
 	// eg. https://open.spotify.com/track/6aOaB0vl2ilHxRb23Wiazv
 	externalURL := playing.Item.ExternalURLs["spotify"]
-	// eg. Retarded
-	trackName := playing.Item.Name
-	// eg. KID FRESINO
-	artistName := playing.Item.Artists[0].Name
 	// eg. Retarded/KID FRESINO
-	metadata := fmt.Sprintf("%s/%s", trackName, artistName)
+	metadata := generateMetadata(playing, &metadataOption{trackInfo: true, albumName: false, albumImage: false, short: true})
 	if 25 < utf8.RuneCountInString(metadata) {
 		metadata = string([]rune(metadata)[:25]) + "…"
 	}
@@ -334,6 +342,49 @@ func (h *handler) Serve(playing *spotify.CurrentlyPlaying) {
 	if err != nil {
 		printError(err)
 	}
+}
+
+func (h *handler) postTopic(topicID int, playing *spotify.CurrentlyPlaying) {
+	// eg. https://open.spotify.com/track/6aOaB0vl2ilHxRb23Wiazv
+	externalURL := playing.Item.ExternalURLs["spotify"]
+	// eg. Retarded/KID FRESINO - ai qing [ ](https://i.scdn.co/image/ab67616d0000b273b3ca13afd5b1315924854ce7)
+	metadata := generateMetadata(playing, &metadataOption{trackInfo: true, albumName: true, albumImage: true, short: false})
+	msg := fmt.Sprintf("%s %s\n%s", h.emoji, metadata, externalURL)
+	_, _, err := h.tc.Messages.PostMessage(context.Background(), topicID, msg, &typetalk.PostMessageOptions{})
+	if err != nil {
+		printError(err)
+	}
+}
+
+type metadataOption struct {
+	trackInfo  bool
+	albumName  bool
+	albumImage bool
+	short      bool
+}
+
+func generateMetadata(playing *spotify.CurrentlyPlaying, opt *metadataOption) string {
+	meta := ""
+	if opt.trackInfo {
+		// eg. Retarded
+		trackName := playing.Item.Name
+		// eg. KID FRESINO
+		artistName := playing.Item.Artists[0].Name
+		format := "%s / %s"
+		if opt.short {
+			format = "%s/%s"
+		}
+		meta += fmt.Sprintf(format, trackName, artistName)
+	}
+	if opt.albumName {
+		albumName := playing.Item.Album.Name
+		meta += fmt.Sprintf(" - %s", albumName)
+	}
+	if opt.albumImage {
+		albumImageURL := playing.Item.Album.Images[0].URL
+		meta += fmt.Sprintf(" [ ](%s)", albumImageURL)
+	}
+	return meta
 }
 
 func completeAuth(w http.ResponseWriter, r *http.Request) {
