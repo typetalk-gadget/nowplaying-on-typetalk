@@ -1,5 +1,10 @@
 # Changelog
 
+## [v0.4.0](https://github.com/typetalk-gadget/nowplaying-on-typetalk/compare/v0.3.1...v0.4.0) (2020-08-20)
+
+* Support post-to-topic feature [#17](https://github.com/typetalk-gadget/nowplaying-on-typetalk/pull/17) ([mananyuki](https://github.com/mananyuki))
+* Update README.md [#16](https://github.com/typetalk-gadget/nowplaying-on-typetalk/pull/16) ([tsuyoshizawa](https://github.com/tsuyoshizawa))
+
 ## [v0.3.1](https://github.com/typetalk-gadget/nowplaying-on-typetalk/compare/v0.3.0...v0.3.1) (2020-08-17)
 
 * persist access token as cache [#14](https://github.com/typetalk-gadget/nowplaying-on-typetalk/pull/14) ([vvatanabe](https://github.com/vvatanabe))
